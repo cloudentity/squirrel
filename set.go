@@ -7,55 +7,26 @@ import (
 	"github.com/lann/builder"
 )
 
-type SetBuilder builder.Builder
-
 func init() {
 	builder.Register(SetBuilder{}, setData{})
 }
 
-type setData struct {
-	Selects           []*setSelect
-	PlaceholderFormat PlaceholderFormat
+type SetBuilder builder.Builder
+
+type Intersect []Sqlizer
+
+func (i Intersect) ToSql() (sql string, args []interface{}, err error) {
+	return setToSql(i, "INTERSECT")
 }
 
-type setSelect struct {
-	op       string
-	selector SelectBuilder
+type Union []Sqlizer
+
+func (i Union) ToSql() (sql string, args []interface{}, err error) {
+	return setToSql(i, "UNION")
 }
 
-func (d *setData) ToSql() (sql string, args []interface{}, err error) {
-	var (
-		selArgs []interface{}
-		selSql  string
-		sqlBuf  = &bytes.Buffer{}
-	)
-
-	if len(d.Selects) == 0 {
-		err = errors.New("require a minimum of 1 select clause in SetBuilder")
-		return sql, args, err
-	}
-
-	for index, selector := range d.Selects {
-		selSql, selArgs, err = selector.selector.ToSql()
-
-		if err != nil {
-			return sql, args, err
-		}
-
-		if index == 0 {
-			sqlBuf.WriteString(selSql)
-		} else {
-			sqlBuf.WriteString(" " + selector.op + " " + selSql)
-		}
-
-		args = append(args, selArgs...)
-	}
-
-	return sqlBuf.String(), args, err
-}
-
-func (b SetBuilder) setProp(key string, value interface{}) SetBuilder {
-	return builder.Set(b, key, value).(SetBuilder)
+func (b SetBuilder) Query(q Sqlizer) SetBuilder {
+	return builder.Set(b, "Query", q).(SetBuilder)
 }
 
 func (b SetBuilder) ToSql() (sql string, args []interface{}, err error) {
@@ -64,15 +35,60 @@ func (b SetBuilder) ToSql() (sql string, args []interface{}, err error) {
 }
 
 func (b SetBuilder) PlaceholderFormat(fmt PlaceholderFormat) SetBuilder {
-	return b.setProp("PlaceholderFormat", fmt)
+	return builder.Set(b, "PlaceholderFormat", fmt).(SetBuilder)
 }
 
-func (b SetBuilder) Union(selector SelectBuilder) SetBuilder {
-	selector = selector.PlaceholderFormat(Question)
-	return builder.Append(b, "Selects", &setSelect{op: "UNION", selector: selector}).(SetBuilder)
+type setData struct {
+	Query             Sqlizer
+	PlaceholderFormat PlaceholderFormat
 }
 
-func (b SetBuilder) setFirstSelect(selector SelectBuilder) SetBuilder {
-	selector = selector.PlaceholderFormat(Question)
-	return builder.Append(b, "Selects", &setSelect{op: "", selector: selector}).(SetBuilder)
+func (d *setData) ToSql() (sql string, args []interface{}, err error) {
+	return d.Query.ToSql()
+}
+
+func setToSql(queries []Sqlizer, op string) (sql string, args []interface{}, err error) {
+	var (
+		selArgs []interface{}
+		selSql  string
+		sqlBuf  = &bytes.Buffer{}
+	)
+
+	if len(queries) == 0 {
+		err = errors.New("require a minimum of 1 query in set builder")
+		return sql, args, err
+	}
+
+	for index, selector := range queries {
+		switch s := selector.(type) {
+		case SelectBuilder:
+			selector = s.PlaceholderFormat(Question)
+		}
+
+		selSql, selArgs, err = selector.ToSql()
+
+		if err != nil {
+			return sql, args, err
+		}
+
+		switch selector.(type) {
+		case Intersect, Union:
+			if index == 0 {
+				sqlBuf.WriteString("(" + selSql + ")")
+			} else {
+				sqlBuf.WriteString(" " + op + " (" + selSql + ")")
+			}
+
+		default:
+			if index == 0 {
+				sqlBuf.WriteString(selSql)
+			} else {
+				sqlBuf.WriteString(" " + op + " " + selSql)
+			}
+		}
+
+		args = append(args, selArgs...)
+	}
+
+	return sqlBuf.String(), args, err
 }
