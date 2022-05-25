@@ -32,8 +32,8 @@ func (b StatementBuilderType) Delete(from string) DeleteBuilder {
 }
 
 // Set returns a SetBuilder for this StatementBuilderType.
-func (b StatementBuilderType) Set(s SelectBuilder) SetBuilder {
-	return SetBuilder(b).setFirstSelect(s)
+func (b StatementBuilderType) Set(s Sqlizer) SetBuilder {
+	return SetBuilder(b).Query(s)
 }
 
 // PlaceholderFormat sets the PlaceholderFormat field for any child builders.
