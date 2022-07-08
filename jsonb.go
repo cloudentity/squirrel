@@ -34,7 +34,7 @@ func (j jsonbContains) ToSql() (sql string, args []interface{}, err error) {
 		return "", args, err
 	}
 
-	buf.WriteString("'?'::JSONB")
+	buf.WriteString("?::JSONB")
 
 	return buf.String(), []interface{}{string(v)}, nil
 }

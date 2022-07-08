@@ -13,7 +13,7 @@ func TestJsonbString(t *testing.T) {
 	sql, args, err := j.ToSql()
 	require.NoError(t, err)
 
-	assert.Equal(t, "payload->'name' @> '?'::JSONB", sql)
+	assert.Equal(t, "payload->'name' @> ?::JSONB", sql)
 	assert.Equal(t, []interface{}{`"john"`}, args)
 }
 
@@ -23,7 +23,7 @@ func TestJsonbNumber(t *testing.T) {
 	sql, args, err := j.ToSql()
 	require.NoError(t, err)
 
-	assert.Equal(t, "payload->'age' @> '?'::JSONB", sql)
+	assert.Equal(t, "payload->'age' @> ?::JSONB", sql)
 	assert.Equal(t, []interface{}{`30`}, args)
 }
 
@@ -33,7 +33,7 @@ func TestJsonbBool(t *testing.T) {
 	sql, args, err := j.ToSql()
 	require.NoError(t, err)
 
-	assert.Equal(t, "payload->'active' @> '?'::JSONB", sql)
+	assert.Equal(t, "payload->'active' @> ?::JSONB", sql)
 	assert.Equal(t, []interface{}{`true`}, args)
 }
 
@@ -43,7 +43,7 @@ func TestJsonbNested(t *testing.T) {
 	sql, args, err := j.ToSql()
 	require.NoError(t, err)
 
-	assert.Equal(t, "payload->'address'->'street' @> '?'::JSONB", sql)
+	assert.Equal(t, "payload->'address'->'street' @> ?::JSONB", sql)
 	assert.Equal(t, []interface{}{`"abbey road"`}, args)
 }
 
@@ -53,7 +53,7 @@ func TestJsonbArray(t *testing.T) {
 	sql, args, err := j.ToSql()
 	require.NoError(t, err)
 
-	assert.Equal(t, "payload->'roles' @> '?'::JSONB", sql)
+	assert.Equal(t, "payload->'roles' @> ?::JSONB", sql)
 	assert.Equal(t, []interface{}{`["admin"]`}, args)
 }
 
@@ -68,6 +68,6 @@ func TestJsonbComplex(t *testing.T) {
 	sql, args, err := j.ToSql()
 	require.NoError(t, err)
 
-	assert.Equal(t, "payload @> '?'::JSONB", sql)
+	assert.Equal(t, "payload @> ?::JSONB", sql)
 	assert.Equal(t, []interface{}{`{"address":{"street":"abbey road"},"age":30}`}, args)
 }
